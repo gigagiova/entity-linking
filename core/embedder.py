@@ -1,4 +1,3 @@
-import json
 import numpy
 import wikipedia
 from wikidata.entity import Entity
@@ -13,21 +12,23 @@ def embed_from_wikidata(entity: Entity) -> numpy.ndarray:
     :return: entity embedding
     """
 
-    # In case no wikipedia page is linked to this entity
-    if "enwiki" not in entity.data["sitelinks"]:
+    # In case a wikipedia page is linked to this entity
+    if "enwiki" in entity.data["sitelinks"]:
+        # Gets the english wikipedia title from wikidata page and loads the relative wikipedia page
+        wiki_title = entity.data["sitelinks"]["enwiki"]["url"].split("/")[-1]
+        page = wikipedia.page(title=wiki_title, auto_suggest=False)
 
-        # In case there is no description in english, return an empty vector | TODO: create a more robust approach
-        if "en" not in entity.data["descriptions"]:
-            return numpy.zeros(kb.entity_vector_length)
+        # computes the embedding
+        embedded = nlp(page.summary)
+        return embedded.vector
 
-        # Else, embed wikidata description
+    # Else, embed the wikidata description
+    if "en" not in entity.data["descriptions"]:
         embedded = nlp(entity.data["descriptions"]["en"]["value"])
         return embedded.vector
 
-    # Gets the english wikipedia title from wikidata page and loads the relative wikipedia page
-    wiki_title = entity.data["sitelinks"]["enwiki"]["url"].split("/")[-1]
-    page = wikipedia.page(title=wiki_title, auto_suggest=False)
+    # In case there is no description in english, return an empty vector | TODO: create a more robust approach
+    return numpy.zeros(kb.entity_vector_length)
 
-    # computes the embedding
-    embedded = nlp(page.summary)
-    return embedded.vector
+
+
